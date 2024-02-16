@@ -1,0 +1,57 @@
+---
+import Navigation from '../components/Navigation.astro'
+import { SkipLinks } from 'accessible-astro-components'
+import { Icon } from 'astro-icon/components'
+---
+
+<header>
+  <SkipLinks />
+  <Navigation>
+    <li class="menu-item">
+      <a href="/">Home</a>
+    </li>
+    <li class="menu-item">
+      <a href="/research/">Research</a>
+    </li>
+    <li class="menu-item">
+      <a href="/publications/">Publications</a>
+    </li>
+    <!-- <li class="menu-item">
+      <a href="https://accessible-astro.dev" title="CV" rel="external noopener noreferrer">CV</a>
+    </li> -->
+    <li class="menu-item">
+      <a href="/Contact/">Contact</a>
+    </li>
+    <li class="menu-item type-icon">
+      <a href="https://scholar.google.com/citations?user=2e9U3u8AAAAJ&hl=en&authuser=1" title="View Google Scholar page">
+        <Icon name="scholar" />
+      </a>
+    </li>
+  </Navigation>
+</header>
+
+<style lang="scss" is:global>
+  @use '../assets/scss/base/outline' as *;
+
+  header {
+    .type-icon a {
+      display: block;
+
+      [data-icon] {
+        height: 30px;
+        margin-top: -4px;
+        width: 30px;
+
+        path {
+          fill: var(--action-color);
+        }
+      }
+
+      &:hover {
+        [data-icon] path {
+          fill: var(--action-color-state);
+        }
+      }
+    }
+  }
+</style>

@@ -1,15 +1,29 @@
 ---
+import DefaultLayout from '../layouts/DefaultLayout.astro'
+import Hero from '../components/Hero.astro'
+import PlanarBackground from '../components/PlanarBackground.astro'
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<DefaultLayout title="Home">
+  <PlanarBackground />
+  <Hero />
+  <!-- <HorizontalCard>
+    <p class="text-xl">
+      Using semantic HTML, landmarks, skip links, screen reader friendly content, aria-labels, keyboard accessible
+      navigation and components, clear outlines and tab indicators and the right color contrast, you're more certain of
+      reaching WCAG AA compliance.
+    </p>
+  </HorizontalCard> -->
+  <!-- {
+    last_posts.map((post) => (
+      <>
+        <HorizontalCard>
+          <h3>{post.data.title}</h3>
+          <p class="text-lg">
+            {post.data}
+          </p>
+        </HorizontalCard>
+      </>
+    ))
+  } -->
+</DefaultLayout>

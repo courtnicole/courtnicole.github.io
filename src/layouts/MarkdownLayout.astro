@@ -1,0 +1,43 @@
+---
+import DefaultLayout from './DefaultLayout.astro'
+
+const { frontmatter } = Astro.props
+---
+
+<DefaultLayout title={frontmatter.title}>
+  <div class="container">
+    <div class="space-content my-12">
+      <slot />
+    </div>
+  </div>
+</DefaultLayout>
+
+<style lang="scss">
+  @use '../assets/scss/base/breakpoint' as *;
+
+  .space-content {
+    position: relative;
+    padding: 2rem;
+
+    > * {
+      position: relative;
+    }
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+    }
+
+    &::before {
+      inset: 0;
+      background-color: var(--neutral_transparent-100);
+      border-radius: 1rem;
+      z-index: -1;
+    }
+  }
+
+  :global(.darkmode .space-content::before) {
+    background-color: var(--dark_transparent-100);
+  }
+</style>

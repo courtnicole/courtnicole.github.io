@@ -1,0 +1,43 @@
+---
+---
+
+<section class="my-64">
+  <div class="horizontal_card">
+    <div class="container">
+      <div class="space-content flex flex-col justify-center">
+        <slot />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style lang="scss">
+  @use '../assets/scss/base/breakpoint' as *;
+
+  .container {
+    position: relative;
+    padding: 2rem;
+
+    > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+    }
+
+    &::before {
+      inset: 0;
+      background-color: var(--neutral_transparent-100);
+      border-radius: 1rem;
+      z-index: 1;
+    }
+  }
+
+  :global(.darkmode .container::before) {
+    background-color: var(--dark_transparent-100);
+  }
+</style>
