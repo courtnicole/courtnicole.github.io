@@ -12,7 +12,8 @@ export default defineConfig({
     iconDir: "src/assets/icons",
     include: {
       teenyicons: ['vr-headset-outline'],
-      ion: ['bookmark-outline', 'information-circle-outline', 'notifications-outline', 'checkbox-outline', 'warning-outline', 'alert-circle-outline']
+      ion: ['bookmark-outline', 'information-circle-outline', 'notifications-outline', 'checkbox-outline', 'warning-outline', 'alert-circle-outline'],
+      mdi:['email', 'linkedin', ]
     }
   }), compress()]
 });
