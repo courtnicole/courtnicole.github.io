@@ -1,17 +1,17 @@
 ---
-import '@astrojs/tailwind/base.css'
-import '../assets/scss/globals.scss'
-import SiteMeta from '../components/SiteMeta.astro'
-import Header from '../components/Header.astro'
-import Footer from '../components/Footer.astro'
+import "@astrojs/tailwind/base.css";
+import "../assets/scss/globals.scss";
+import SiteMeta from "../components/SiteMeta.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
 
 const {
-  title = 'Courtney Hutton Pospick',
-  description = 'Mixed Reality & Human-Computer Interaction Researcher',  
-  url = 'https://huttonpospick.com',
-  image = '/social-preview-image.webp',
-  author = 'Courtney Hutton Pospick',
-} = Astro.props
+  title = "Courtney Hutton Pospick",
+  description = "Mixed Reality & Human-Computer Interaction Researcher",
+  url = "https://huttonpospick.com",
+  image = "/social-preview-image.webp",
+  author = "Courtney Hutton Pospick",
+} = Astro.props;
 ---
 
 <html lang="en" dir="ltr">
@@ -26,29 +26,30 @@ const {
     <SiteMeta
       title={title}
       description={description.substring(0, 100)}
-      url={Astro.site
-        ? `${Astro.site}/${title.toLowerCase().replaceAll(' ', '-')}`
-        : `https://accessible-astro.dev/${title.toLowerCase().replaceAll(' ', '-')}`}
+      url={`${Astro.site}/${title.toLowerCase().replaceAll(" ", "-")}`}
       image={image}
       author={author}
     />
   </head>
   <body>
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script
+      async
+      src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"
+    ></script>
     <script type="importmap">
-    {
-      "imports": {
-        "three": "../build/three.module.js",
-        "three/addons/": "./jsm/"
+      {
+        "imports": {
+          "three": "../build/three.module.js",
+          "three/addons/": "./jsm/"
+        }
       }
-    }
     </script>
     <Header />
     <main id="main-content">
       <slot />
     </main>
     <Footer />
-    
+
     <style lang="scss" is:global>
       // theme settings
       :root {
@@ -56,10 +57,12 @@ const {
         --radius-large: 6px;
         --gap-default: 2rem;
         --font-measure: 70ch;
-        --font-family-default: 'Open Sans', sans-serif;
-        --font-family-special: 'Open Sans', sans-serif;
+        --font-family-default: "Open Sans", sans-serif;
+        --font-family-special: "Open Sans", sans-serif;
         // light theme
         --font-color: var(--neutral-900);
+        --link-color-dark: var(--neutral-100);
+        --link-color-light: var(--neutral-900);
         --action-color: var(--primary-300);
         --action-color-state: var(--primary-500);
         --background: var(--neutral-100);

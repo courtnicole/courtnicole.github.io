@@ -5,11 +5,26 @@ const currentYear = new Date().getFullYear()
 <footer>
   <section class="py-8">
     <div class="container">
-      <p>
-        &copy; {currentYear} Built with <a href="https://astro.build/">Astro</a>. Theme by <a
-          href="https://github.com/markteekman">Mark Teekman</a
-        >.
+      <p class="footer-text">
+        &copy; {currentYear} Courtney Hutton Pospick. Powered by <a class="footer-link" href="https://astro.build/">Astro</a> & 
+        <a class="footer-link" href="https://github.com/markteekman/accessible-astro-starter/">Accessible-Astro</a>
       </p>
     </div>
   </section>
 </footer>
+
+<style lang="scss" is:global>
+  .footer-link {
+    color: var(--action-color);
+    text-decoration: underline;
+    &:visited {
+      color:var(--action-color);
+      text-decoration: none;
+    }
+    &:hover,
+    &:focus {
+      color: var(--action-color-state);;
+      text-decoration: none;
+    }
+  }
+</style>

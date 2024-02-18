@@ -1,0 +1,58 @@
+---
+import { Icon } from "astro-icon/components";
+---
+
+<div class="container">
+  <div
+    class="call-to-action mt-24 mb-32 flex flex-col items-center gap-12 rounded-xl p-12 md:p-24"
+  >
+    <h2 class="text-center text-4xl md:text-7xl">Connect With Me</h2>
+    <div class="flex flex-row items-center gap-8">
+        <a
+        class="justify-center button w-56 has-icon type-secondary text-center text-lg"
+        href="https://scholar.google.com/citations?user=2e9U3u8AAAAJ&hl=en&authuser=1"
+        title="View Google Scholar page"
+      >
+        <Icon name="scholar" />
+        Google Scholar
+      </a>
+      <a
+        class="justify-center text-center text-lg button w-56 has-icon type-secondary "
+        href="https://www.linkedin.com/in/huttonpospick/"
+        title="View LinkedIn page"
+        >
+        <Icon name="mdi:linkedin" />
+        LinkedIn
+    </a>
+  </div>
+</div>
+
+<style lang="scss">
+  .call-to-action {
+    color: var(--neutral-900);
+    background-image: linear-gradient(
+      40deg,
+      var(--primary-100),
+      var(--secondary-200)
+    );
+  }
+
+  .call-to-action a:not(button),
+  .call-to-action a:not(button):visited {
+    padding: 1rem;
+    color: var(--neutral-900);
+    font-weight: bold;
+    border: 3px solid var(--neutral-900);
+    border-radius: 3px;
+    text-decoration: none;
+    transition:
+      color 0.15s ease-in-out,
+      background-color 0.15s ease-in-out;
+
+    &:where(:hover, :focus) {
+      color: var(--neutral-100);
+      background-color: var(--neutral-900);
+      text-decoration: underline;
+    }
+  }
+</style>

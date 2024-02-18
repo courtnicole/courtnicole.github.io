@@ -6,9 +6,9 @@ import { Icon } from 'astro-icon/components'
 
 <div id="main-navigation" class="is-desktop py-8">
   <div class="container">
-    <a href="/" class="flex items-center gap-2 !no-underline">
-      <Icon name="logo" class="nav-icon"/>
-      <span class="font-bold text-lg md:text-lg lg:text-lg" style="color:var(--font-color)">Courtney Hutton Pospick</span>
+    <a id="desktop-logo-name" href="/" class="flex items-center gap-2 !no-underline">
+      <Icon id="header-logo" name="logo" class="nav-icon"/>
+      <span id="header-name" class="hidden lg:block font-bold text-lg md:text-md lg:text-lg" style="color:var(--font-color)">Courtney Hutton Pospick</span>
     </a>
     <div class="wrapper">
       <nav class="desktop-menu" aria-label="Main navigation desktop" >
@@ -58,7 +58,7 @@ window.addEventListener('load', () => {
     const checkMenuSize = () => {
         const mainNavWidth = mainNav.getBoundingClientRect().width
         const desktopMenuWidth = (document.querySelector('.desktop-menu'))?.getBoundingClientRect().width
-        const logoWidthBuffer = 450
+        const logoWidthBuffer = 420
         const totalMenuWidth = Math.round(desktopMenuWidth) + logoWidthBuffer
 
         if (totalMenuWidth >= mainNavWidth) {
@@ -251,7 +251,7 @@ window.addEventListener('load', () => {
       }
 
       .darkmode-toggle {
-        margin-top: -6px;
+        margin-top: -4px;
       }
     }
 
@@ -267,14 +267,15 @@ window.addEventListener('load', () => {
       }
 
       .desktop-menu {
-        visibility: hidden;
-        z-index: -99;
-        position: absolute;
-        left: 0;
+        display: none;
+        // visibility: hidden;
+        // z-index: -99;
+        // position: absolute;
+        // left: 0;
       }
 
       .responsive-toggle {
-        display: block;
+        display: inline-block;
       }
     }
 
@@ -318,7 +319,7 @@ window.addEventListener('load', () => {
 
     .mobile-menu {
       flex-basis: 100%;
-      padding: 2rem 0;
+      padding: 1rem 0;
 
       > ul {
         flex-direction: column;
@@ -405,7 +406,7 @@ window.addEventListener('load', () => {
 
     svg {
       width: 30px;
-      margin-top: -2px;
+      margin-top: 4px;
     }
 
     svg path {

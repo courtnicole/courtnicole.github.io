@@ -15,16 +15,19 @@ import {
   BufferGeometry,
 } from 'three'
 import { WebGL } from 'three/examples/jsm/Addons.js'
+import { clamp } from 'three/src/math/MathUtils.js'
 
 let scene, camera, renderer
-let geometry, material, materialShader, plane
-let vHeight, vWidth, pHeight, pWidth
+let geometry, material, materialShader, plane, directionalLight
+let vHeight, vWidth, pHeight, pWidth, amplitude, period, cells
 
 //prefix for noise material + uniforms
 const vertexNoisePrefix = /*glsl*/ `
 uniform float time;
 uniform float vWidthInv;
 uniform float vHeightInv;
+uniform float amplitude;
+uniform vec2 period;
 
 varying vec3 vertColor;
 varying vec3 vertColor2;
@@ -100,12 +103,12 @@ const vertexNoiseBody = /*glsl*/ `
     vec3 gradient;
     vec3 gradient2;
     vec2 vPos = vec2(position.x * vWidthInv, position.y * vHeightInv);
-    float s_noise = psrdnoise(vec3(vPos.x * 4.73, vPos.y * 3.16, time), vec3(5.12, 4.0, 13.24), 1.571, gradient);
+    float s_noise = psrdnoise(vec3(vPos.x * period.x, vPos.y * period.y, time), vec3(5.12, 4.0, 13.24), 1.571, gradient);
     float s_noise2 = psrdnoise(vec3(vPos.x, vPos.y, time), vec3(-5.12, 4.0, -13.24), 1.571, gradient2);
     gradient = normalize(gradient);
-    vec3 transformed = vec3(position.x, position.y, 23.2 * s_noise);
+    vec3 transformed = vec3(position.x, position.y, amplitude * s_noise);
     vec3 h = gradient - (dot(gradient, normal) * normal);
-    transformedNormal = normalize(normal - (23.2 * h));
+    transformedNormal = normalize(normal - (amplitude * h));
     transformedNormal  = normalMatrix * transformedNormal;
     #ifndef FLAT_SHADED
 	    vNormal = normalize( transformedNormal );
@@ -135,11 +138,8 @@ vec3 color = mix(vertColor2, vertColor, t);
 diffuseColor.rgb = color;
 `
 
-//a **magic** number
-const CELLS = 225
-
-var loader = new TextureLoader()
-const vivid = await loader.loadAsync('/lookup.png')
+const loader = new TextureLoader()
+const vivid = loader.load('/lookup.png')
 vivid.colorSpace = 'srgb'
 
 const canvas = document.getElementById('bg')
@@ -180,7 +180,7 @@ function init() {
   const light = new AmbientLight(0xffffff, 0.45) // soft white light
   scene.add(light)
 
-  const directionalLight = new DirectionalLight(0xffffff, 1.45)
+  directionalLight = new DirectionalLight(0xffffff, 1.45)
   directionalLight.position.set(0, 1, 0)
   directionalLight.castShadow = true
   directionalLight.shadow.mapSize.width = 512
@@ -207,6 +207,9 @@ function setSizes() {
   vWidth = 1.1 * size.x
   pWidth = 0.5 * vWidth
   pHeight = 0.5 * vHeight
+  amplitude = 0.0667 * vHeight
+  period = new Vector2(0.0075 * vWidth, 0.0075 * vHeight)
+  cells = clamp(Math.ceil(pWidth * 0.6), 100, 350)
 }
 
 //Buffer geometry, saves like 0.5MB of memory 
@@ -221,21 +224,21 @@ function initGeometry() {
   const normals = []
   const indices = []
 
-  for (let i = 0; i < CELLS + 1; i++) {
-    const y = Math.ceil(vHeight) * (i / CELLS) - halfHeight
-    for (let j = 0; j < CELLS + 1; j++) {
-      const x = Math.ceil(vWidth) * (j / CELLS) - halfWidth
+  for (let i = 0; i < cells + 1; i++) {
+    const y = Math.ceil(vHeight) * (i / cells) - halfHeight
+    for (let j = 0; j < cells + 1; j++) {
+      const x = Math.ceil(vWidth) * (j / cells) - halfWidth
       positions.push(x, -y, 0)
       normals.push(0, 0, 1)
     }
   }
 
-  for (let i = 0; i < CELLS; i++) {
-    for (let j = 0; j < CELLS; j++) {
-      const a = i * (CELLS + 1) + (j + 1)
-      const b = i * (CELLS + 1) + j
-      const c = (i + 1) * (CELLS + 1) + j
-      const d = (i + 1) * (CELLS + 1) + (j + 1)
+  for (let i = 0; i < cells; i++) {
+    for (let j = 0; j < cells; j++) {
+      const a = i * (cells + 1) + (j + 1)
+      const b = i * (cells + 1) + j
+      const c = (i + 1) * (cells + 1) + j
+      const d = (i + 1) * (cells + 1) + (j + 1)
       indices.push(a, b, d)
       indices.push(b, c, d)
     }
@@ -259,6 +262,8 @@ function initMaterial() {
     shader.uniforms.time = { value: 0.0 }
     shader.uniforms.vWidthInv = { value: 1 / pWidth }
     shader.uniforms.vHeightInv = { value: 1 / pHeight }
+    shader.uniforms.amplitude = { value: amplitude }
+    shader.uniforms.period = { value: period }
     shader.uniforms.vivid = { value: vivid }
 
     let token = '#include <common>'
@@ -315,21 +320,21 @@ function updatePlaneGeometry() {
   const halfWidth = Math.ceil(vWidth) / 2
   const halfHeight = Math.ceil(vHeight) / 2
 
-  for (let i = 0; i < CELLS + 1; i++) {
-    const y = Math.ceil(vHeight) * (i / CELLS) - halfHeight
-    for (let j = 0; j < CELLS + 1; j++) {
-      const x = Math.ceil(vWidth) * (j / CELLS) - halfWidth
+  for (let i = 0; i < cells + 1; i++) {
+    const y = Math.ceil(vHeight) * (i / cells) - halfHeight
+    for (let j = 0; j < cells + 1; j++) {
+      const x = Math.ceil(vWidth) * (j / cells) - halfWidth
       positions.push(x, -y, 0)
       normals.push(0, 0, 1)
     }
   }
 
-  for (let i = 0; i < CELLS; i++) {
-    for (let j = 0; j < CELLS; j++) {
-      const a = i * (CELLS + 1) + (j + 1)
-      const b = i * (CELLS + 1) + j
-      const c = (i + 1) * (CELLS + 1) + j
-      const d = (i + 1) * (CELLS + 1) + (j + 1)
+  for (let i = 0; i < cells; i++) {
+    for (let j = 0; j < cells; j++) {
+      const a = i * (cells + 1) + (j + 1)
+      const b = i * (cells + 1) + j
+      const c = (i + 1) * (cells + 1) + j
+      const d = (i + 1) * (cells + 1) + (j + 1)
       indices.push(a, b, d)
       indices.push(b, c, d)
     }
@@ -340,9 +345,14 @@ function updatePlaneGeometry() {
   geometry.setAttribute('normal', new Float32BufferAttribute(normals, 3))
   geometry.setIndex(indices)
 
+  directionalLight.shadow.camera.left = -0.5 * vWidth
+  directionalLight.shadow.camera.right = 0.5 * vWidth
+
   plane.geometry = geometry
   if (materialShader) materialShader.uniforms['vWidthInv'].value = 1 / pWidth
   if (materialShader) materialShader.uniforms['vHeightInv'].value = 1 / pHeight
+  if (materialShader) materialShader.uniforms['amplitude'].value = amplitude
+  if (materialShader) materialShader.uniforms['period'].value = period
 }
 
 function render() {

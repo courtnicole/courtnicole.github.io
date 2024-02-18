@@ -1,19 +1,12 @@
 ---
-import DefaultLayout from '../layouts/DefaultLayout.astro'
-import Hero from '../components/Hero.astro'
-import PlanarBackground from '../components/PlanarBackground.astro'
+import DefaultLayout from "../layouts/DefaultLayout.astro";
+import Hero from "../components/Hero.astro";
+import PlanarBackground from "../components/PlanarBackground.astro";
 ---
 
 <DefaultLayout title="Home">
   <PlanarBackground />
   <Hero />
-  <!-- <HorizontalCard>
-    <p class="text-xl">
-      Using semantic HTML, landmarks, skip links, screen reader friendly content, aria-labels, keyboard accessible
-      navigation and components, clear outlines and tab indicators and the right color contrast, you're more certain of
-      reaching WCAG AA compliance.
-    </p>
-  </HorizontalCard> -->
   <!-- {
     last_posts.map((post) => (
       <>
@@ -27,3 +20,22 @@ import PlanarBackground from '../components/PlanarBackground.astro'
     ))
   } -->
 </DefaultLayout>
+
+<style lang="scss" is:global>
+  .footer-text {
+    color: var(--neutral-300)
+  }
+  .footer-link {
+    color: hsl(192, 100%, 80%);
+    text-decoration: underline;
+    &:visited {
+      color:hsl(192, 100%, 80%);
+      text-decoration: none;
+    }
+    &:hover,
+    &:focus {
+      color: hsl(192, 100%, 80%),;
+      text-decoration: none;
+    }
+  }
+</style>
