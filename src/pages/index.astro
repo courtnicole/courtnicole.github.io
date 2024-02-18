@@ -7,18 +7,6 @@ import PlanarBackground from "../components/PlanarBackground.astro";
 <DefaultLayout title="Home">
   <PlanarBackground />
   <Hero />
-  <!-- {
-    last_posts.map((post) => (
-      <>
-        <HorizontalCard>
-          <h3>{post.data.title}</h3>
-          <p class="text-lg">
-            {post.data}
-          </p>
-        </HorizontalCard>
-      </>
-    ))
-  } -->
 </DefaultLayout>
 
 <style lang="scss" is:global>
@@ -26,15 +14,15 @@ import PlanarBackground from "../components/PlanarBackground.astro";
     color: var(--neutral-300)
   }
   .footer-link {
-    color: hsl(192, 100%, 80%);
+    color: var(--secondary-100);
     text-decoration: underline;
     &:visited {
-      color:hsl(192, 100%, 80%);
+      color:var(--secondary-200);
       text-decoration: none;
     }
     &:hover,
     &:focus {
-      color: hsl(192, 100%, 80%),;
+      color: var(--secondary-300);
       text-decoration: none;
     }
   }

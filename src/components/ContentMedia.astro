@@ -1,25 +1,38 @@
 ---
-import { Media } from 'accessible-astro-components'
+import { Media } from "accessible-astro-components";
 
-const { imgSrc, reverseImg = false } = Astro.props
+const { url, title, tags, imgSrc, reverseImg = false } = Astro.props;
 ---
 
-<section class="my-64">
-  <div class="content_media">
-    <div class="container">
-      <div class="grid grid-cols-1 gap-24 md:grid-cols-2">
-        {!reverseImg ? <Media class="rounded-lg" src={imgSrc} /> : ''}
-        <div class="space-content flex flex-col justify-center">
-          <slot />
-        </div>
-        {reverseImg ? <Media class="rounded-lg" src={imgSrc} /> : ''}
+<section class="my-8">
+  <div class="container">
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-[auto_minmax(0,_1fr)]">
+      <div
+        class={`justify-center md:justify-normal ${!reverseImg ? `flex` : `hidden`}`}
+      >
+        {!reverseImg ? <Media class="rounded-lg h-64" src={imgSrc} /> : ""}
+      </div>
+      <div
+        class="content-media-text space-content flex flex-col justify-center"
+      >
+        <h3 class="text-4xl my-6">
+          {title}
+        </h3>
+        <slot />
+        <p><a href={url}> View Project</a></p>
+        <small>{tags}</small>
+      </div>
+      <div
+        class={`justify-center md:justify-normal ${reverseImg ? `flex` : `hidden`}`}
+      >
+        {reverseImg ? <Media class="rounded-lg h-64" src={imgSrc} /> : ""}
       </div>
     </div>
   </div>
 </section>
 
 <style lang="scss">
-  @use '../assets/scss/base/breakpoint' as *;
+  @use "../assets/scss/base/breakpoint" as *;
 
   .container {
     position: relative;
@@ -32,7 +45,7 @@ const { imgSrc, reverseImg = false } = Astro.props
 
     &::before,
     &::after {
-      content: '';
+      content: "";
       position: absolute;
     }
 
@@ -41,6 +54,22 @@ const { imgSrc, reverseImg = false } = Astro.props
       background-color: var(--neutral_transparent-100);
       border-radius: 1rem;
       z-index: 1;
+    }
+  }
+
+  .content-media-text a:not(button),
+  .content-media-text a:not(button):visited {
+    color: var(--text-color);
+    font-weight: bold;
+    text-decoration: underline;
+    transition: color 0.15s ease-in-out;
+
+    &:where(:hover, :focus) {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-decoration-style: wavy;
+      text-decoration-color: var(--action-color);
+      text-underline-offset: 2px;
     }
   }
 

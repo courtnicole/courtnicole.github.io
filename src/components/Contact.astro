@@ -6,8 +6,8 @@ import { Icon } from "astro-icon/components";
   <div
     class="call-to-action mt-24 mb-32 flex flex-col items-center gap-12 rounded-xl p-12 md:p-24"
   >
-    <h2 class="text-center text-4xl md:text-7xl">Connect With Me</h2>
-    <div class="flex flex-row items-center gap-8">
+    <h2 class="text-center text-4xl md:text-5xl">Connect With Me</h2>
+    <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
         <a
         class="justify-center button w-56 has-icon type-secondary text-center text-lg"
         href="https://scholar.google.com/citations?user=2e9U3u8AAAAJ&hl=en&authuser=1"
@@ -24,8 +24,24 @@ import { Icon } from "astro-icon/components";
         <Icon name="mdi:linkedin" />
         LinkedIn
     </a>
+    <a
+        class="justify-center text-center text-lg button w-56 has-icon type-secondary "
+        id="email"
+        href=""
+        title="Send an email"
+        >
+        <Icon name="mdi:email" />
+        E-Mail
+    </a>
   </div>
 </div>
+
+<script is:inline>
+  const encode = 'Y291cnRuZXkubi5odXR0b25AZ21haWwuY29t';
+  const form = document.getElementById("email");
+  form.setAttribute("href", "mailto:".concat(atob(encode)));
+</script>
+
 
 <style lang="scss">
   .call-to-action {
