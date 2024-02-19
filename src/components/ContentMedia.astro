@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-const { url, title, tags, imgSrc, imgAlt = "description", reverseImg = false } = Astro.props;
+const { showLink = true, linkText = "View Paper", url, title, tags, imgSrc, imgAlt = "description", reverseImg = false } = Astro.props;
 ---
 
 <section class="my-8">
@@ -18,7 +18,7 @@ const { url, title, tags, imgSrc, imgAlt = "description", reverseImg = false } =
           {title}
         </h3>
         <slot />
-        <p><a href={url}> View Project</a></p>
+        <p>{showLink ? <a href={url}> {linkText}</a> : <a> "In Progress"</a>}</p>
         <small>{tags}</small>
       </div>
       <div
