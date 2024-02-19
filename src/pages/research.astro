@@ -1,6 +1,10 @@
 ---
 import DefaultLayout from "../layouts/DefaultLayout.astro";
-
+import midair from '../assets/images/midair_1.webp';
+import cognition from '../assets/images/vr_cognition.webp';
+import arcade from '../assets/images/arcade_1.webp';
+import remind from '../assets/images/remind_1.webp';
+import rdw from '../assets/images/rdw_1.webp';
 import ContentMedia from "../components/ContentMedia.astro";
 ---
 
@@ -9,9 +13,10 @@ import ContentMedia from "../components/ContentMedia.astro";
     <div class="container">
       <h1>Research</h1>
       <ContentMedia
-        imgSrc="/research/midair_1.webp"
+        imgSrc={midair}
         title="Mid-Air Locomotion & Spatial Cognition"
         tags="SPATIAL COGNITION  //  LOCOMOTION"
+        url="/research/"
       >
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
@@ -20,9 +25,10 @@ import ContentMedia from "../components/ContentMedia.astro";
       </ContentMedia>
       <hr class="h-px my-2 bg-gray-200 border-0 dark:bg-gray-700" />
       <ContentMedia
-        imgSrc="/research/vr_cognition.webp"
+        imgSrc={cognition}
         title="3D User Interfaces for Mixed Reality Path Planning"
         tags="SPATIAL COGNITION  //  3D  INTERACTION"
+        url="/research/"
       >
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
@@ -31,9 +37,10 @@ import ContentMedia from "../components/ContentMedia.astro";
       </ContentMedia>
       <hr class="h-px my-2 bg-gray-200 border-0 dark:bg-gray-700" />
       <ContentMedia
-        imgSrc="/research/arcade_1.webp"
+        imgSrc={arcade}
         title="VR Arcade Game Interactions"
         tags="PERSONAL PROJECTS  //  3D  INTERACTION"
+        url="/research/"
       >
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
@@ -42,9 +49,10 @@ import ContentMedia from "../components/ContentMedia.astro";
       </ContentMedia>
       <hr class="h-px my-2 bg-gray-200 border-0 dark:bg-gray-700" />
       <ContentMedia
-        imgSrc="/research/remind_1.webp"
+        imgSrc={remind}
         title="ReMind: Wearable for Emotional Awareness"
         tags="EMBODIED INTERACTION  //  COMMUNITY-DRIVEN DESIGN"
+        url="/research/"
       >
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
@@ -53,9 +61,10 @@ import ContentMedia from "../components/ContentMedia.astro";
       </ContentMedia>
       <hr class="h-px my-2 bg-gray-200 border-0 dark:bg-gray-700" />
       <ContentMedia
-        imgSrc="/research/rdw_1.webp"
+        imgSrc={rdw}
         title="Individualized Rotation Gains for Redirected Walking"
         tags="LOCOMOTION   //  PSYCHOPHYSICAL THRESHOLDS"
+        url="/research/"
       >
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim

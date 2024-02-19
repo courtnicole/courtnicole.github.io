@@ -1,7 +1,6 @@
 ---
-import { Media } from "accessible-astro-components";
-
-const { url, title, tags, imgSrc, reverseImg = false } = Astro.props;
+import { Image } from 'astro:assets';
+const { url, title, tags, imgSrc, imgAlt = "description", reverseImg = false } = Astro.props;
 ---
 
 <section class="my-8">
@@ -10,7 +9,7 @@ const { url, title, tags, imgSrc, reverseImg = false } = Astro.props;
       <div
         class={`justify-center md:justify-normal ${!reverseImg ? `flex` : `hidden`}`}
       >
-        {!reverseImg ? <Media class="rounded-lg h-64" src={imgSrc} /> : ""}
+        {!reverseImg ? <Image class="rounded-lg h-64" src={imgSrc} alt={imgAlt} loading='eager' width="256"/> : ""}
       </div>
       <div
         class="content-media-text space-content flex flex-col justify-center"
@@ -25,7 +24,7 @@ const { url, title, tags, imgSrc, reverseImg = false } = Astro.props;
       <div
         class={`justify-center md:justify-normal ${reverseImg ? `flex` : `hidden`}`}
       >
-        {reverseImg ? <Media class="rounded-lg h-64" src={imgSrc} /> : ""}
+        {reverseImg ? <Image class="rounded-lg h-64" src={imgSrc} alt={imgAlt} loading='eager' width="256"/> : ""}
       </div>
     </div>
   </div>
