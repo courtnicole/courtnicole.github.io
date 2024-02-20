@@ -2,34 +2,60 @@
 import DefaultLayout from "../layouts/DefaultLayout.astro";
 import Hero from "../components/Hero.astro";
 import PlanarBackground from "../components/PlanarBackground.astro";
+import { Icon } from "astro-icon/components";
 ---
 
 <script
-async
-src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"
+  async
+  src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"
 ></script>
 <script type="importmap">
-{
-  "imports": {
-    "three": "../build/three.module.js",
-    "three/addons/": "./jsm/"
+  {
+    "imports": {
+      "three": "../build/three.module.js",
+      "three/addons/": "./jsm/"
+    }
   }
-}
 </script>
 <DefaultLayout title="Home">
-  <PlanarBackground />
-  <Hero />
+  <div id="load" class="load flex align-middle justify-center">
+    <!-- <Icon id="loader-logo" name="load" class="load-icon" /> -->
+  </div>
+  <div id="wrapper">
+    <PlanarBackground />
+    <Hero />
+  </div>
 </DefaultLayout>
 
+<script is:inline>
+  window.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("wrapper").style.display = "block";
+    document.getElementById("load").style.display = "none";
+  });
+</script>
+
 <style lang="scss" is:global>
+  #wrapper {
+    text-align: center;
+    display: none;
+  }
+
+  .load-icon {
+    width: 165px;
+    height: 165px;
+    path {
+      fill: var(--font-color);
+    }
+  }
+
   .footer-text {
-    color: var(--neutral-300)
+    color: var(--neutral-300);
   }
   .footer-link {
     color: var(--secondary-100);
     text-decoration: underline;
     &:visited {
-      color:var(--secondary-200);
+      color: var(--secondary-200);
       text-decoration: none;
     }
     &:hover,

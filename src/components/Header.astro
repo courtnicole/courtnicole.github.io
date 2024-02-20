@@ -1,7 +1,6 @@
 ---
 import Navigation from '../components/Navigation.astro'
 import { SkipLinks } from 'accessible-astro-components'
-import { Icon } from 'astro-icon/components'
 ---
 
 <header>
@@ -13,20 +12,23 @@ import { Icon } from 'astro-icon/components'
     <li class="menu-item">
       <a href="/research/">Research</a>
     </li>
-    <li class="menu-item">
-      <a href="/work/">Work</a>
+    <li class="menu-item has-dropdown">
+      <button aria-haspopup="true" aria-expanded="false">About</button>
+      <ul class="dropdown-menu">
+        <li class="submenu-item">
+          <a href="/work/">Industry</a>
+        </li>
+        <li class="submenu-item">
+          <a href="/publications/">Publications</a>
+        </li>
+        <li class="submenu-item">
+          <a href="/HuttonPospickCV.pdf">CV</a>
+        </li>
+        <li class="submenu-item">
+          <a href="/contact/">Contact</a>
+        </li>
+      </ul>
     </li>
-    <!-- <li class="menu-item">
-      <a href="https://accessible-astro.dev" title="CV" rel="external noopener noreferrer">CV</a>
-    </li> -->
-    <li class="menu-item">
-      <a href="/contact/">Contact</a>
-    </li>
-    <!-- <li class="menu-item type-icon">
-      <a href="https://scholar.google.com/citations?user=2e9U3u8AAAAJ&hl=en&authuser=1" title="View Google Scholar page">
-        <Icon name="scholar" />
-      </a>
-    </li> -->
   </Navigation>
 </header>
 

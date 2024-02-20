@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-const { showLink = true, linkText = "View Paper", url, title, tags, imgSrc, imgAlt = "description", reverseImg = false } = Astro.props;
+const { showLink = true, linkText = "View Paper", altText, url, title, tags, imgSrc, imgAlt = "description", reverseImg = false } = Astro.props;
 ---
 
 <section class="my-8">
@@ -18,7 +18,7 @@ const { showLink = true, linkText = "View Paper", url, title, tags, imgSrc, imgA
           {title}
         </h3>
         <slot />
-        <p>{showLink ? <a href={url}> {linkText}</a> : <a> "In Progress"</a>}</p>
+       {showLink ? <p> <a href={url}> {linkText}</a> </p>: <p class="italic">{altText}</p>}
         <small>{tags}</small>
       </div>
       <div

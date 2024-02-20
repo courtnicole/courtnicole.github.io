@@ -1,8 +1,7 @@
 import { defineConfig } from 'astro/config';
 import tailwind from "@astrojs/tailwind";
 import icon from "astro-icon";
-
-import compress from "astro-compress";
+import mdx from "@astrojs/mdx";
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,7 +12,7 @@ export default defineConfig({
     include: {
       teenyicons: ['vr-headset-outline'],
       ion: ['bookmark-outline', 'information-circle-outline', 'notifications-outline', 'checkbox-outline', 'warning-outline', 'alert-circle-outline'],
-      mdi:['email', 'linkedin', ]
+      mdi: ['email', 'linkedin']
     }
-  }), compress()]
+  }), mdx()]
 });
