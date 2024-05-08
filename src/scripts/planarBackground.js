@@ -14,6 +14,12 @@ import {
   Float32BufferAttribute,
   BufferGeometry,
   Raycaster,
+  SphereGeometry,
+  Vector3,
+  Plane,
+  PlaneHelper,
+  Quaternion,
+  Matrix4,
 } from "three";
 import { WebGL } from "three/examples/jsm/Addons.js";
 import { clamp } from "three/src/math/MathUtils.js";
@@ -22,6 +28,7 @@ let scene, camera, renderer;
 let geometry, material, materialShader, plane, directionalLight;
 let vHeight, vWidth, pHeight, pWidth, amplitude, period, cells;
 let pointerMoved = false;
+let testSphere;
 
 //prefix for noise material + uniforms
 const vertexNoisePrefix = /*glsl*/ `
@@ -35,7 +42,8 @@ varying vec3 vertColor;
 varying vec3 vertColor2;
 uniform sampler2D vivid;
 
-uniform vec2 mousePos;
+uniform vec3 mousePos;
+uniform vec2 mouseUV;
 
 vec4 permute(vec4 i) {
   vec4 im = mod(i, 289.0);
@@ -104,24 +112,34 @@ float psrdnoise(vec3 x, vec3 period, float alpha, out vec3 gradient) {
   return 39.5 * n;
 }
 `;
-//super basic noise shader to displace planar geometry
+//super basic noise shader to displace planar geometry (runs on mobile)
 const vertexNoiseBody = /*glsl*/ `
     vec3 gradient;
     vec3 gradient2;
-    float mouseSize = 20.0;
     vec2 vPos = vec2(position.x * vWidthInv, position.y * vHeightInv);
     float s_noise = psrdnoise(vec3(vPos.x * period.x, vPos.y * period.y, time), vec3(5.12, 4.0, 13.24), 1.571, gradient);
     float s_noise2 = psrdnoise(vec3(vPos.x, vPos.y, time), vec3(-5.12, 4.0, -13.24), 1.571, gradient2);
-    float bounds = 1.0/vWidthInv;
-    float mousePhase = clamp( length( ( uv - vec2( 0.5 ) ) * bounds - vec2( mousePos.x, - mousePos.y ) ) * PI / mouseSize, 0.0, PI );
     gradient = normalize(gradient);
     vec3 newPosition = vec3(position.x, position.y, amplitude * s_noise);
-    float newHeight = newPosition.z;
-    newHeight += ( cos( mousePhase ) + 1.0 ) * 0.28;
+
+    float mouseSize = 80.0;
+    float bounds = 1.0/vWidthInv;
+    vec2 point = vec2(mousePos.x * vWidthInv, mousePos.y * vHeightInv);
+    float distanceMouse = distance(mousePos, position);
+    float wd = max(0.0, 1.0-((distanceMouse) * (distanceMouse)));
+    //weight the shift the position based on distance from mouse 
+    float newHeight = position.z;
+    float weight = clamp(1.0 - distanceMouse / mouseSize, 0.0, 1.0);
+    newHeight += wd * mouseSize;
+    
+
     vec3 transformed = vec3(position.x, position.y, newHeight);
+
+
     vec3 h = gradient - (dot(gradient, normal) * normal);
     transformedNormal = normalize(normal - (amplitude * h));
     transformedNormal  = normalMatrix * transformedNormal;
+    
     #ifndef FLAT_SHADED
 	    vNormal = normalize(transformedNormal);
         #ifdef USE_TANGENT
@@ -212,13 +230,17 @@ function init() {
   initMaterial();
   initMesh();
 
+  const testGeometry = new SphereGeometry(5);
+  const testMaterial = new MeshPhongMaterial({ color: 0xff0000 });
+  testSphere = new Mesh(testGeometry, testMaterial);
+  scene.add(testSphere);
+
   directionalLight.target = plane;
   scene.add(directionalLight);
 
   window.addEventListener("resize", onWindowResize, false);
 
-  canvas.style.touchAction = "none";
-  canvas.addEventListener("pointermove", onPointerMove);
+  document.addEventListener("pointermove", onPointerMove);
 
   renderer.setAnimationLoop(render);
 }
@@ -274,6 +296,7 @@ function initGeometry() {
   geometry.setIndex(indices);
 
   geometry.computeBoundingSphere();
+  geometry.computeBoundingBox();
 }
 
 function initMaterial() {
@@ -291,6 +314,8 @@ function initMaterial() {
     shader.uniforms.amplitude = { value: amplitude };
     shader.uniforms.period = { value: period };
     shader.uniforms.vivid = { value: vivid };
+    shader.uniforms.mousePos = { value: new Vector3() };
+    shader.uniforms.mouseUV = { value: new Vector2() };
 
     let token = "#include <common>";
 
@@ -336,13 +361,27 @@ function initMaterial() {
 }
 
 function initMesh() {
+
+  
   plane = new Mesh(geometry, material);
   plane.rotation.x = -Math.PI / 2 - 0.2;
-  plane.position.set(0, -0.4 * vHeight, 0);
+  plane.position.set(0, -0.36 * vHeight, 0);
   plane.castShadow = true;
   plane.receiveShadow = true;
-
   scene.add(plane);
+  console.log(plane.rotation);
+  console.log(plane.quaternion);
+  
+  const quat = new Quaternion();
+  quat.setFromAxisAngle(new Vector3(1,0,0), -Math.PI / 2 - 0.2);
+  console.log(quat);
+
+  const vector = new Vector3( 0, 0, 1 ).applyQuaternion( quat );
+  console.log(vector);
+
+  const smallPlane = new Plane()
+  smallPlane.set(vector, 0);
+  smallPlane.translate(new Vector3(0, -0.35 * vHeight, 0));
 }
 
 function updatePlaneGeometry() {
@@ -363,8 +402,25 @@ function updatePlaneGeometry() {
 
 function render() {
   if (!canvas) return;
+
   const now = performance.now() * 0.00015;
   if (materialShader) materialShader.uniforms["time"].value = now;
+
+  if (pointerMoved){
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObject(plane);
+    if (intersects.length > 0){
+      const point = intersects[0].point;
+      const uv = intersects[0].uv;
+      if (materialShader) materialShader.uniforms["mousePos"].value = point;
+      if (materialShader) materialShader.uniforms["mouseUV"].value = uv;
+      const size = new Vector2();
+      camera.getViewSize(500, size);
+      testSphere.position.x = pointer.x * size.x * 0.5;
+      testSphere.position.y = pointer.y * size.y * 0.5;
+    }
+    pointerMoved = false;
+  }
 
   renderer.render(scene, camera);
 }
@@ -378,8 +434,9 @@ function onWindowResize() {
 }
 
 function onPointerMove(event) {
-  pointer.x = (x / renderer.domElement.clientWidth) * 2 - 1;
-  pointer.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
+  
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY /window.innerHeight) * 2 + 1;
 
   pointerMoved = true;
 }
