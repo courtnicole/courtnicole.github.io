@@ -13,13 +13,15 @@ import {
   Vector2,
   Float32BufferAttribute,
   BufferGeometry,
-} from 'three'
-import { WebGL } from 'three/examples/jsm/Addons.js'
-import { clamp } from 'three/src/math/MathUtils.js'
+  Raycaster,
+} from "three";
+import { WebGL } from "three/examples/jsm/Addons.js";
+import { clamp } from "three/src/math/MathUtils.js";
 
-let scene, camera, renderer
-let geometry, material, materialShader, plane, directionalLight
-let vHeight, vWidth, pHeight, pWidth, amplitude, period, cells
+let scene, camera, renderer;
+let geometry, material, materialShader, plane, directionalLight;
+let vHeight, vWidth, pHeight, pWidth, amplitude, period, cells;
+let pointerMoved = false;
 
 //prefix for noise material + uniforms
 const vertexNoisePrefix = /*glsl*/ `
@@ -32,6 +34,8 @@ uniform vec2 period;
 varying vec3 vertColor;
 varying vec3 vertColor2;
 uniform sampler2D vivid;
+
+uniform vec2 mousePos;
 
 vec4 permute(vec4 i) {
   vec4 im = mod(i, 289.0);
@@ -99,24 +103,29 @@ float psrdnoise(vec3 x, vec3 period, float alpha, out vec3 gradient) {
   gradient = 39.5 * (dn0 + dn1 + dn2 + dn3);
   return 39.5 * n;
 }
-`
+`;
 //super basic noise shader to displace planar geometry
-//if rgb<->lch wasn't so expensive, it would be fun to use
 const vertexNoiseBody = /*glsl*/ `
     vec3 gradient;
     vec3 gradient2;
+    float mouseSize = 20.0;
     vec2 vPos = vec2(position.x * vWidthInv, position.y * vHeightInv);
     float s_noise = psrdnoise(vec3(vPos.x * period.x, vPos.y * period.y, time), vec3(5.12, 4.0, 13.24), 1.571, gradient);
     float s_noise2 = psrdnoise(vec3(vPos.x, vPos.y, time), vec3(-5.12, 4.0, -13.24), 1.571, gradient2);
+    float bounds = 1.0/vWidthInv;
+    float mousePhase = clamp( length( ( uv - vec2( 0.5 ) ) * bounds - vec2( mousePos.x, - mousePos.y ) ) * PI / mouseSize, 0.0, PI );
     gradient = normalize(gradient);
-    vec3 transformed = vec3(position.x, position.y, amplitude * s_noise);
+    vec3 newPosition = vec3(position.x, position.y, amplitude * s_noise);
+    float newHeight = newPosition.z;
+    newHeight += ( cos( mousePhase ) + 1.0 ) * 0.28;
+    vec3 transformed = vec3(position.x, position.y, newHeight);
     vec3 h = gradient - (dot(gradient, normal) * normal);
     transformedNormal = normalize(normal - (amplitude * h));
     transformedNormal  = normalMatrix * transformedNormal;
     #ifndef FLAT_SHADED
-	    vNormal = normalize( transformedNormal );
+	    vNormal = normalize(transformedNormal);
         #ifdef USE_TANGENT
-          vTangent = normalize( transformedTangent );
+          vTangent = normalize(transformedTangent);
           vBitangent = normalize( cross( vNormal, vTangent ) * tangent.w );
         #endif
     #endif
@@ -126,131 +135,145 @@ const vertexNoiseBody = /*glsl*/ `
     
     vertColor = texture2D(vivid, vec2(t, 0.)).rgb;
     vertColor2 = texture2D(vivid, vec2(t2, 0.)).rgb;
-  `
+  `;
 
 const fragmentPrefix = /*glsl*/ `
 const float f = 6.239;
 uniform float time;
 varying vec3 vertColor;
 varying vec3 vertColor2;
-`
+`;
 
 const fragmentBody = /*glsl*/ `
 float t = 0.5 * cos(f * time) + 0.5;
 vec3 color = mix(vertColor2, vertColor, t);
 diffuseColor.rgb = color;
-`
+`;
 
-const loader = new TextureLoader()
-const vivid = loader.load('/lookup.png')
-vivid.colorSpace = 'srgb'
+const loader = new TextureLoader();
+const vivid = loader.load("/lookup.png");
+vivid.colorSpace = "srgb";
 
-const canvas = document.getElementById('bg')
+const pointer = new Vector2();
+const raycaster = new Raycaster();
+
+const canvas = document.getElementById("bg");
 if (WebGL.isWebGLAvailable()) {
-  init()
+  init();
 } else {
-  canvas.appendChild(WebGL.getWebGLErrorMessage())
+  canvas.appendChild(WebGL.getWebGLErrorMessage());
 }
 
 function init() {
   if (!canvas) {
-    console.log('No canvas found')
-    return
+    console.log("No canvas found");
+    return;
   }
 
-  ColorManagement.enabled = true
+  ColorManagement.enabled = true;
 
-  camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000)
-  camera.position.set(0, 0, 500)
+  camera = new PerspectiveCamera(
+    50,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(0, 0, 500);
 
   renderer = new WebGLRenderer({
     antialias: true,
     alpha: true,
-  })
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.toneMapping = ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.5
-  renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = PCFSoftShadowMap
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  canvas.appendChild(renderer.domElement)
+  });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.5;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  canvas.appendChild(renderer.domElement);
 
-  scene = new Scene()
-  scene.name = 'Scene'
+  scene = new Scene();
+  scene.name = "Scene";
 
-  setSizes()
+  setSizes();
 
-  const light = new AmbientLight(0xffffff, 0.45) // soft white light
-  scene.add(light)
+  const light = new AmbientLight(0xffffff, 0.45);
+  scene.add(light);
 
-  directionalLight = new DirectionalLight(0xffffff, 1.45)
-  directionalLight.position.set(0, 1, 0)
-  directionalLight.castShadow = true
-  directionalLight.shadow.mapSize.width = 512
-  directionalLight.shadow.mapSize.height = 512
-  directionalLight.shadow.camera.left = -0.5 * vWidth
-  directionalLight.shadow.camera.right = 0.5 * vWidth
+  directionalLight = new DirectionalLight(0xffffff, 1.45);
+  directionalLight.position.set(0, 1, 0);
+  directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.width = 512;
+  directionalLight.shadow.mapSize.height = 512;
+  directionalLight.shadow.camera.left = -0.5 * vWidth;
+  directionalLight.shadow.camera.right = 0.5 * vWidth;
 
-  initGeometry()
-  initMaterial()
-  initMesh()
+  initGeometry();
+  initMaterial();
+  initMesh();
 
-  directionalLight.target = plane
-  scene.add(directionalLight)
+  directionalLight.target = plane;
+  scene.add(directionalLight);
 
-  window.addEventListener('resize', onWindowResize, false)
-  renderer.setAnimationLoop(render)
+  window.addEventListener("resize", onWindowResize, false);
+
+  canvas.style.touchAction = "none";
+  canvas.addEventListener("pointermove", onPointerMove);
+
+  renderer.setAnimationLoop(render);
 }
 
 function setSizes() {
-  let size = new Vector2()
-  camera.getViewSize(500, size)
+  let size = new Vector2();
+  camera.getViewSize(500, size);
 
-  vHeight = 1.1 * size.y
-  vWidth = 1.1 * size.x
-  pWidth = 0.5 * vWidth
-  pHeight = 0.5 * vHeight
-  amplitude = 0.0667 * vHeight
-  period = new Vector2(0.0075 * vWidth, 0.0075 * vHeight)
-  cells = clamp(Math.ceil(pWidth * 0.6), 100, 350)
+  vHeight = 1.1 * size.y;
+  vWidth = 1.1 * size.x;
+  pWidth = 0.5 * vWidth;
+  pHeight = 0.5 * vHeight;
+  amplitude = 0.0667 * vHeight;
+  period = new Vector2(0.0075 * vWidth, 0.0075 * vHeight);
+  cells = clamp(Math.ceil(pWidth * 0.6), 100, 350);
 }
 
-//Buffer geometry, saves like 0.5MB of memory 
+//Buffer geometry, saves like 0.5MB of memory
 //(depending on screen size)
-//Worth it? Probably not
+//Worth it...? tbd
 //todo: interleave buffer attributes
 function initGeometry() {
-  const halfWidth = Math.ceil(vWidth) / 2
-  const halfHeight = Math.ceil(vHeight) / 2
+  const halfWidth = Math.ceil(vWidth) / 2;
+  const halfHeight = Math.ceil(vHeight) / 2;
 
-  const positions = []
-  const normals = []
-  const indices = []
+  const positions = [];
+  const normals = [];
+  const indices = [];
 
   for (let i = 0; i < cells + 1; i++) {
-    const y = Math.ceil(vHeight) * (i / cells) - halfHeight
+    const y = Math.ceil(vHeight) * (i / cells) - halfHeight;
     for (let j = 0; j < cells + 1; j++) {
-      const x = Math.ceil(vWidth) * (j / cells) - halfWidth
-      positions.push(x, -y, 0)
-      normals.push(0, 0, 1)
+      const x = Math.ceil(vWidth) * (j / cells) - halfWidth;
+      positions.push(x, -y, 0);
+      normals.push(0, 0, 1);
     }
   }
 
   for (let i = 0; i < cells; i++) {
     for (let j = 0; j < cells; j++) {
-      const a = i * (cells + 1) + (j + 1)
-      const b = i * (cells + 1) + j
-      const c = (i + 1) * (cells + 1) + j
-      const d = (i + 1) * (cells + 1) + (j + 1)
-      indices.push(a, b, d)
-      indices.push(b, c, d)
+      const a = i * (cells + 1) + (j + 1);
+      const b = i * (cells + 1) + j;
+      const c = (i + 1) * (cells + 1) + j;
+      const d = (i + 1) * (cells + 1) + (j + 1);
+      indices.push(a, b, d);
+      indices.push(b, c, d);
     }
   }
 
-  geometry = new BufferGeometry()
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
-  geometry.setAttribute('normal', new Float32BufferAttribute(normals, 3))
-  geometry.setIndex(indices)
+  geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+  geometry.setIndex(indices);
+
+  geometry.computeBoundingSphere();
 }
 
 function initMaterial() {
@@ -259,116 +282,104 @@ function initMaterial() {
     specular: 0x222222,
     shininess: 80,
     reflectivity: 0.5,
-  })
+  });
 
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.time = { value: 0.0 }
-    shader.uniforms.vWidthInv = { value: 1 / pWidth }
-    shader.uniforms.vHeightInv = { value: 1 / pHeight }
-    shader.uniforms.amplitude = { value: amplitude }
-    shader.uniforms.period = { value: period }
-    shader.uniforms.vivid = { value: vivid }
+    shader.uniforms.time = { value: 0.0 };
+    shader.uniforms.vWidthInv = { value: 1 / pWidth };
+    shader.uniforms.vHeightInv = { value: 1 / pHeight };
+    shader.uniforms.amplitude = { value: amplitude };
+    shader.uniforms.period = { value: period };
+    shader.uniforms.vivid = { value: vivid };
 
-    let token = '#include <common>'
+    let token = "#include <common>";
 
-    let insert = vertexNoisePrefix
+    let insert = vertexNoisePrefix;
 
-    shader.vertexShader = shader.vertexShader.replace(token, insert + '\n' + token)
+    shader.vertexShader = shader.vertexShader.replace(
+      token,
+      insert + "\n" + token
+    );
 
-    token = '#include <normal_vertex>'
+    token = "#include <normal_vertex>";
 
-    insert = ''
+    insert = "";
 
-    shader.vertexShader = shader.vertexShader.replace(token, insert)
+    shader.vertexShader = shader.vertexShader.replace(token, insert);
 
-    token = '#include <begin_vertex>'
+    token = "#include <begin_vertex>";
 
-    insert = vertexNoiseBody
+    insert = vertexNoiseBody;
 
-    shader.vertexShader = shader.vertexShader.replace(token, insert)
+    shader.vertexShader = shader.vertexShader.replace(token, insert);
 
-    token = '#include <common>'
+    token = "#include <common>";
 
-    insert = fragmentPrefix
+    insert = fragmentPrefix;
 
-    shader.fragmentShader = shader.fragmentShader.replace(token, insert + '\n' + token)
+    shader.fragmentShader = shader.fragmentShader.replace(
+      token,
+      insert + "\n" + token
+    );
 
-    token = '#include <lights_phong_fragment>'
+    token = "#include <lights_phong_fragment>";
 
-    insert = fragmentBody
+    insert = fragmentBody;
 
-    shader.fragmentShader = shader.fragmentShader.replace(token, insert + '\n' + token)
+    shader.fragmentShader = shader.fragmentShader.replace(
+      token,
+      insert + "\n" + token
+    );
 
-    materialShader = shader
-  }
+    materialShader = shader;
+  };
 }
 
 function initMesh() {
-  plane = new Mesh(geometry, material)
-  plane.rotation.x = -Math.PI / 2 - 0.2
-  plane.position.set(0, -0.4 * vHeight, 0)
-  plane.castShadow = true
-  plane.receiveShadow = true
+  plane = new Mesh(geometry, material);
+  plane.rotation.x = -Math.PI / 2 - 0.2;
+  plane.position.set(0, -0.4 * vHeight, 0);
+  plane.castShadow = true;
+  plane.receiveShadow = true;
 
-  scene.add(plane)
+  scene.add(plane);
 }
 
 function updatePlaneGeometry() {
-  geometry.dispose()
-  plane.geometry.dispose()
+  geometry.dispose();
+  plane.geometry.dispose();
 
-  const positions = []
-  const normals = []
-  const indices = []
-  const halfWidth = Math.ceil(vWidth) / 2
-  const halfHeight = Math.ceil(vHeight) / 2
+  initGeometry();
 
-  for (let i = 0; i < cells + 1; i++) {
-    const y = Math.ceil(vHeight) * (i / cells) - halfHeight
-    for (let j = 0; j < cells + 1; j++) {
-      const x = Math.ceil(vWidth) * (j / cells) - halfWidth
-      positions.push(x, -y, 0)
-      normals.push(0, 0, 1)
-    }
-  }
+  directionalLight.shadow.camera.left = -0.5 * vWidth;
+  directionalLight.shadow.camera.right = 0.5 * vWidth;
 
-  for (let i = 0; i < cells; i++) {
-    for (let j = 0; j < cells; j++) {
-      const a = i * (cells + 1) + (j + 1)
-      const b = i * (cells + 1) + j
-      const c = (i + 1) * (cells + 1) + j
-      const d = (i + 1) * (cells + 1) + (j + 1)
-      indices.push(a, b, d)
-      indices.push(b, c, d)
-    }
-  }
-
-  geometry = new BufferGeometry()
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
-  geometry.setAttribute('normal', new Float32BufferAttribute(normals, 3))
-  geometry.setIndex(indices)
-
-  directionalLight.shadow.camera.left = -0.5 * vWidth
-  directionalLight.shadow.camera.right = 0.5 * vWidth
-
-  plane.geometry = geometry
-  if (materialShader) materialShader.uniforms['vWidthInv'].value = 1 / pWidth
-  if (materialShader) materialShader.uniforms['vHeightInv'].value = 1 / pHeight
-  if (materialShader) materialShader.uniforms['amplitude'].value = amplitude
-  if (materialShader) materialShader.uniforms['period'].value = period
+  plane.geometry = geometry;
+  if (materialShader) materialShader.uniforms["vWidthInv"].value = 1 / pWidth;
+  if (materialShader) materialShader.uniforms["vHeightInv"].value = 1 / pHeight;
+  if (materialShader) materialShader.uniforms["amplitude"].value = amplitude;
+  if (materialShader) materialShader.uniforms["period"].value = period;
 }
 
 function render() {
-  if (!canvas) return
-  const now = performance.now() * 0.00015
-  if (materialShader) materialShader.uniforms['time'].value = now
-  renderer.render(scene, camera)
+  if (!canvas) return;
+  const now = performance.now() * 0.00015;
+  if (materialShader) materialShader.uniforms["time"].value = now;
+
+  renderer.render(scene, camera);
 }
 
 function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight
-  camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  setSizes()
-  updatePlaneGeometry()
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  setSizes();
+  updatePlaneGeometry();
+}
+
+function onPointerMove(event) {
+  pointer.x = (x / renderer.domElement.clientWidth) * 2 - 1;
+  pointer.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
+
+  pointerMoved = true;
 }
