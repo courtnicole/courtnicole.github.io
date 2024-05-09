@@ -16,16 +16,15 @@ import {
   Raycaster,
   SphereGeometry,
   Vector3,
-  Plane,
-  PlaneHelper,
+  MeshBasicMaterial,
   Quaternion,
-  Matrix4,
+  PlaneGeometry,
 } from "three";
 import { WebGL } from "three/examples/jsm/Addons.js";
 import { clamp } from "three/src/math/MathUtils.js";
 
 let scene, camera, renderer;
-let geometry, material, materialShader, plane, directionalLight;
+let geometry, material, materialShader, plane, rayPlane, rayMaterial, directionalLight;
 let vHeight, vWidth, pHeight, pWidth, amplitude, period, cells;
 let pointerMoved = false;
 let testSphere;
@@ -42,7 +41,7 @@ varying vec3 vertColor;
 varying vec3 vertColor2;
 uniform sampler2D vivid;
 
-uniform vec3 mousePos;
+uniform vec2 mousePos;
 uniform vec2 mouseUV;
 
 vec4 permute(vec4 i) {
@@ -122,17 +121,15 @@ const vertexNoiseBody = /*glsl*/ `
     gradient = normalize(gradient);
     vec3 newPosition = vec3(position.x, position.y, amplitude * s_noise);
 
-    float mouseSize = 80.0;
-    float bounds = 1.0/vWidthInv;
-    vec2 point = vec2(mousePos.x * vWidthInv, mousePos.y * vHeightInv);
-    float distanceMouse = distance(mousePos, position);
-    float wd = max(0.0, 1.0-((distanceMouse) * (distanceMouse)));
-    //weight the shift the position based on distance from mouse 
+    float mouseSize = 10.0;
+    float distanceMouse = distance(mousePos, vPos);
+    float wd = min(0.0, mouseSize - (abs(distanceMouse/mouseSize)));
     float newHeight = position.z;
-    float weight = clamp(1.0 - distanceMouse / mouseSize, 0.0, 1.0);
-    newHeight += wd * mouseSize;
+    if (wd > 0.0)
+      {
+        newHeight = (mouseSize - wd) * 2.0;
+      }
     
-
     vec3 transformed = vec3(position.x, position.y, newHeight);
 
 
@@ -174,6 +171,9 @@ vivid.colorSpace = "srgb";
 
 const pointer = new Vector2();
 const raycaster = new Raycaster();
+
+const quat = new Quaternion().setFromAxisAngle(new Vector3(1,0,0), -Math.PI / 2 - 0.2);
+const vector = new Vector3( 0, 0, 1 ).applyQuaternion( quat );
 
 const canvas = document.getElementById("bg");
 if (WebGL.isWebGLAvailable()) {
@@ -230,7 +230,7 @@ function init() {
   initMaterial();
   initMesh();
 
-  const testGeometry = new SphereGeometry(5);
+  const testGeometry = new SphereGeometry(2);
   const testMaterial = new MeshPhongMaterial({ color: 0xff0000 });
   testSphere = new Mesh(testGeometry, testMaterial);
   scene.add(testSphere);
@@ -358,35 +358,29 @@ function initMaterial() {
 
     materialShader = shader;
   };
+
+  rayMaterial = new MeshBasicMaterial({ color: 0xffffff, visible: false });
 }
 
 function initMesh() {
-
-  
   plane = new Mesh(geometry, material);
-  plane.rotation.x = -Math.PI / 2 - 0.2;
+  plane.quaternion.set(quat.x, quat.y, quat.z, quat.w);
   plane.position.set(0, -0.36 * vHeight, 0);
   plane.castShadow = true;
   plane.receiveShadow = true;
   scene.add(plane);
-  console.log(plane.rotation);
-  console.log(plane.quaternion);
-  
-  const quat = new Quaternion();
-  quat.setFromAxisAngle(new Vector3(1,0,0), -Math.PI / 2 - 0.2);
-  console.log(quat);
 
-  const vector = new Vector3( 0, 0, 1 ).applyQuaternion( quat );
-  console.log(vector);
-
-  const smallPlane = new Plane()
-  smallPlane.set(vector, 0);
-  smallPlane.translate(new Vector3(0, -0.35 * vHeight, 0));
+  const rayGeometry = new PlaneGeometry(vWidth, vHeight, 1, 1);
+  rayPlane = new Mesh(rayGeometry, rayMaterial);
+  rayPlane.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+  rayPlane.position.set(0, -0.36 * vHeight, 0);
+  scene.add(rayPlane);
 }
 
 function updatePlaneGeometry() {
   geometry.dispose();
   plane.geometry.dispose();
+  rayPlane.geometry.dispose();
 
   initGeometry();
 
@@ -394,6 +388,12 @@ function updatePlaneGeometry() {
   directionalLight.shadow.camera.right = 0.5 * vWidth;
 
   plane.geometry = geometry;
+  plane.position.set(0, -0.36 * vHeight, 0);
+
+  const rayGeometry = new PlaneGeometry(vWidth, vHeight, 1, 1);
+  rayPlane.geometry = rayGeometry;
+  rayPlane.position.set(0, -0.36 * vHeight, 0);
+
   if (materialShader) materialShader.uniforms["vWidthInv"].value = 1 / pWidth;
   if (materialShader) materialShader.uniforms["vHeightInv"].value = 1 / pHeight;
   if (materialShader) materialShader.uniforms["amplitude"].value = amplitude;
@@ -408,18 +408,27 @@ function render() {
 
   if (pointerMoved){
     raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObject(plane);
+    const intersects = raycaster.intersectObject(rayPlane);
     if (intersects.length > 0){
       const point = intersects[0].point;
       const uv = intersects[0].uv;
-      if (materialShader) materialShader.uniforms["mousePos"].value = point;
-      if (materialShader) materialShader.uniforms["mouseUV"].value = uv;
+      if (materialShader) materialShader.uniforms["mousePos"].value.set( point.x, point.z );
+      if (materialShader) materialShader.uniforms["mouseUV"].value.set( uv.x, uv.y );
+      // testSphere.position.set(point);
+      
       const size = new Vector2();
       camera.getViewSize(500, size);
       testSphere.position.x = pointer.x * size.x * 0.5;
       testSphere.position.y = pointer.y * size.y * 0.5;
+      console.log(point);
+      console.log(testSphere.position);
+      
     }
     pointerMoved = false;
+  }
+  else {
+    if (materialShader) materialShader.uniforms["mousePos"].value.set(10000, 10000);
+    if (materialShader) materialShader.uniforms["mouseUV"].value.set(10000, 10000);
   }
 
   renderer.render(scene, camera);
@@ -435,8 +444,10 @@ function onWindowResize() {
 
 function onPointerMove(event) {
   
+  if ( event.isPrimary === false ) return;
+
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY /window.innerHeight) * 2 + 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   pointerMoved = true;
 }
