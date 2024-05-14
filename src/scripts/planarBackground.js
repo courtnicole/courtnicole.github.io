@@ -23,8 +23,14 @@ import { WebGL } from "three/examples/jsm/Addons.js";
 import { clamp } from "three/src/math/MathUtils.js";
 
 let scene, camera, renderer;
-let geometry, material, materialShader, plane, rayPlane, rayMaterial, directionalLight;
-let vHeight, vWidth, pHeight, pWidth, amplitude, period, cells;
+let geometry,
+  material,
+  materialShader,
+  plane,
+  rayPlane,
+  rayMaterial,
+  directionalLight;
+let height, width, halfHeight, halfWidth, amplitude, period, cells;
 let pointerMoved = false;
 
 //prefix for noise material + uniforms
@@ -35,12 +41,8 @@ uniform float vHeightInv;
 uniform float amplitude;
 uniform vec2 period;
 uniform float hitSize;
-
-varying vec3 vertColor;
-varying vec3 vertColor2;
-uniform sampler2D vivid;
-
 uniform vec3 hitPoint;
+varying float vNoise;
 
 vec4 permute(vec4 i) {
   vec4 im = mod(i, 289.0);
@@ -108,33 +110,19 @@ float psrdnoise(vec3 x, vec3 period, float alpha, out vec3 gradient) {
   gradient = 39.5 * (dn0 + dn1 + dn2 + dn3);
   return 39.5 * n;
 }
-
-
-
 `;
-//super basic noise shader to displace planar geometry (runs on mobile)
+//super basic noise shader to displace planar geometry
 const vertexNoiseBody = /*glsl*/ `
     vec3 gradient;
-    vec3 gradient2;
     vec2 vPos = vec2(position.x * vWidthInv, position.y * vHeightInv);
     float s_noise = psrdnoise(vec3(vPos.x * period.x, vPos.y * period.y, time), vec3(5.12, 4.0, 13.24), 1.571, gradient);
-    float s_noise2 = psrdnoise(vec3(vPos.x, vPos.y, time), vec3(-5.12, 4.0, -13.24), 1.571, gradient2);
     gradient = normalize(gradient);
-    vec3 newPosition = vec3(position.x, position.y, amplitude * s_noise);
-    float hitDist = distance(hitPoint.xz, position.xy);
-    float wd = max(0.0, 1.0 - (hitDist / hitSize) * (hitDist / hitSize));
-    float newHeight = position.z;
-    // if (wd > 0.0){
-    //   s_noise = smoothstep(0.0, 1.0, wd);
-    // }
-    newHeight += amplitude * s_noise;
-    
-    vec3 transformed = vec3(position.x, position.y, newHeight);
+    vec3 transformed = vec3(position.x, position.y, amplitude * s_noise);
 
     vec3 h = gradient - (dot(gradient, normal) * normal);
     transformedNormal = normalize(normal - (amplitude * h));
     transformedNormal  = normalMatrix * transformedNormal;
-    
+
     #ifndef FLAT_SHADED
 	    vNormal = normalize(transformedNormal);
         #ifdef USE_TANGENT
@@ -143,24 +131,23 @@ const vertexNoiseBody = /*glsl*/ `
         #endif
     #endif
 
-    float t = smoothstep(0.0, 1.0, 0.5 * s_noise2 + 0.5);
-    float t2 = smoothstep(0.0, 1.0, 0.5 * s_noise + 0.5);
-    
-    vertColor = texture2D(vivid, vec2(t, 0.)).rgb;
-    vertColor2 = texture2D(vivid, vec2(t2, 0.)).rgb;
+    vNoise = s_noise;
   `;
 
 const fragmentPrefix = /*glsl*/ `
 const float f = 6.239;
 uniform float time;
-varying vec3 vertColor;
-varying vec3 vertColor2;
+varying float vNoise;
+uniform sampler2D vivid;
 `;
 
 const fragmentBody = /*glsl*/ `
 float t = 0.5 * cos(f * time) + 0.5;
-vec3 color = mix(vertColor2, vertColor, t);
-diffuseColor.rgb = color;
+float v1 = smoothstep(1.0, 0.0, 0.5 * vNoise + 0.5);
+float v2 = smoothstep(0.0, 1.0, 0.5 * vNoise + 0.5);
+vec3 c1 = texture2D(vivid, vec2(v1, 0.)).rgb;
+vec3 c2 = texture2D(vivid, vec2(v2, 0.)).rgb;
+diffuseColor.rgb = mix(c1, c2, t);
 `;
 
 const loader = new TextureLoader();
@@ -170,7 +157,10 @@ vivid.colorSpace = "srgb";
 const pointer = new Vector2();
 const raycaster = new Raycaster();
 
-const quat = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2 - 0.113);
+const quat = new Quaternion().setFromAxisAngle(
+  new Vector3(1, 0, 0),
+  -Math.PI / 2 - 0.113
+);
 
 const canvas = document.getElementById("bg");
 if (WebGL.isWebGLAvailable()) {
@@ -212,16 +202,16 @@ function init() {
 
   setSizes();
 
-  const light = new AmbientLight(0xffffff, 0.45);
+  const light = new AmbientLight(0xffffff, 0.273);
   scene.add(light);
 
-  directionalLight = new DirectionalLight(0xffffff, 1.45);
+  directionalLight = new DirectionalLight(0xffffff, 1.362);
   directionalLight.position.set(0, 1, 0);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 512;
   directionalLight.shadow.mapSize.height = 512;
-  directionalLight.shadow.camera.left = -0.5 * vWidth;
-  directionalLight.shadow.camera.right = 0.5 * vWidth;
+  directionalLight.shadow.camera.left = -0.5 * width;
+  directionalLight.shadow.camera.right = 0.5 * width;
 
   initGeometry();
   initMaterial();
@@ -241,31 +231,27 @@ function setSizes() {
   let size = new Vector2();
   camera.getViewSize(500, size);
 
-  vHeight = 1.1 * size.y;
-  vWidth = 1.1 * size.x;
-  pWidth = 0.5 * vWidth;
-  pHeight = 0.5 * vHeight;
-  amplitude = 0.0667 * vHeight;
-  period = new Vector2(0.0075 * vWidth, 0.0075 * vHeight);
-  cells = clamp(Math.ceil(pWidth * 0.6), 100, 350);
+  height = 1.1 * size.y;
+  width = 1.1 * size.x;
+  halfWidth = 0.5 * width;
+  halfHeight = 0.5 * height;
+  amplitude = 0.0667 * height;
+  period = new Vector2(0.0075 * width, 0.0075 * height);
+  cells = clamp(Math.ceil(halfWidth), 200, 550);
 }
 
-//Buffer geometry, saves like 0.5MB of memory
-//(depending on screen size)
-//Worth it...? tbd
-//todo: interleave buffer attributes
 function initGeometry() {
-  const halfWidth = Math.ceil(vWidth) / 2;
-  const halfHeight = Math.ceil(vHeight) / 2;
+  const halfWidth = Math.ceil(width) / 2;
+  const halfHeight = Math.ceil(height) / 2;
 
   const positions = [];
   const normals = [];
   const indices = [];
 
   for (let i = 0; i < cells + 1; i++) {
-    const y = Math.ceil(vHeight) * (i / cells) - halfHeight;
+    const y = Math.ceil(height) * (i / cells) - halfHeight;
     for (let j = 0; j < cells + 1; j++) {
-      const x = Math.ceil(vWidth) * (j / cells) - halfWidth;
+      const x = Math.ceil(width) * (j / cells) - halfWidth;
       positions.push(x, -y, 0);
       normals.push(0, 0, 1);
     }
@@ -302,8 +288,8 @@ function initMaterial() {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.time = { value: 0.0 };
     shader.uniforms.hitSize = { value: 30.0 };
-    shader.uniforms.vWidthInv = { value: 1 / pWidth };
-    shader.uniforms.vHeightInv = { value: 1 / pHeight };
+    shader.uniforms.vWidthInv = { value: 1 / halfWidth };
+    shader.uniforms.vHeightInv = { value: 1 / halfHeight };
     shader.uniforms.amplitude = { value: amplitude };
     shader.uniforms.period = { value: period };
     shader.uniforms.vivid = { value: vivid };
@@ -357,15 +343,15 @@ function initMaterial() {
 function initMesh() {
   plane = new Mesh(geometry, material);
   plane.quaternion.set(quat.x, quat.y, quat.z, quat.w);
-  plane.position.set(0, -0.36 * vHeight, 0);
+  plane.position.set(0, -0.36 * height, 0);
   plane.castShadow = true;
   plane.receiveShadow = true;
   scene.add(plane);
 
-  const rayGeometry = new PlaneGeometry(vWidth, vHeight, 1, 1);
+  const rayGeometry = new PlaneGeometry(width, height, 1, 1);
   rayPlane = new Mesh(rayGeometry, rayMaterial);
   rayPlane.quaternion.set(quat.x, quat.y, quat.z, quat.w);
-  rayPlane.position.set(0, -0.36 * vHeight, 0);
+  rayPlane.position.set(0, -0.36 * height, 0);
   scene.add(rayPlane);
 }
 
@@ -376,18 +362,20 @@ function updatePlaneGeometry() {
 
   initGeometry();
 
-  directionalLight.shadow.camera.left = -0.5 * vWidth;
-  directionalLight.shadow.camera.right = 0.5 * vWidth;
+  directionalLight.shadow.camera.left = -0.5 * width;
+  directionalLight.shadow.camera.right = 0.5 * width;
 
   plane.geometry = geometry;
-  plane.position.set(0, -0.36 * vHeight, 0);
+  plane.position.set(0, -0.36 * height, 0);
 
-  const rayGeometry = new PlaneGeometry(vWidth, vHeight, 1, 1);
+  const rayGeometry = new PlaneGeometry(width, height, 1, 1);
   rayPlane.geometry = rayGeometry;
-  rayPlane.position.set(0, -0.36 * vHeight, 0);
+  rayPlane.position.set(0, -0.36 * height, 0);
 
-  if (materialShader) materialShader.uniforms["vWidthInv"].value = 1 / pWidth;
-  if (materialShader) materialShader.uniforms["vHeightInv"].value = 1 / pHeight;
+  if (materialShader)
+    materialShader.uniforms["vWidthInv"].value = 1 / halfWidth;
+  if (materialShader)
+    materialShader.uniforms["vHeightInv"].value = 1 / halfHeight;
   if (materialShader) materialShader.uniforms["amplitude"].value = amplitude;
   if (materialShader) materialShader.uniforms["period"].value = period;
 }
@@ -403,12 +391,17 @@ function render() {
     const intersects = raycaster.intersectObject(rayPlane);
     if (intersects.length > 0) {
       const point = intersects[0].point;
-      if (materialShader) materialShader.uniforms["hitPoint"].value.set(point.x, point.y, -point.z);
+      if (materialShader)
+        materialShader.uniforms["hitPoint"].value.set(
+          point.x,
+          point.y,
+          -point.z
+        );
     }
     pointerMoved = false;
-  }
-  else {
-    if (materialShader) materialShader.uniforms["hitPoint"].value.set(10000, 10000);
+  } else {
+    if (materialShader)
+      materialShader.uniforms["hitPoint"].value.set(10000, 10000);
   }
 
   renderer.render(scene, camera);
@@ -423,7 +416,6 @@ function onWindowResize() {
 }
 
 function onPointerMove(event) {
-
   if (event.isPrimary === false) return;
 
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
