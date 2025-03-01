@@ -20,3 +20,12 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# webstorm settings and dictionaries
+.idea
+
+# package lock
+package-lock.json
+
+# astro build files
+.astro

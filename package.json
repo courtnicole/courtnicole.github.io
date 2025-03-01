@@ -11,18 +11,21 @@
     "astro": "astro"
   },
   "devDependencies": {
-    "@astrojs/mdx": "^2.1.1",
+    "@astrojs/mdx": "^4.1.0",
     "@astrojs/tailwind": "^5.1.0",
     "@iconify-json/ion": "^1.1.15",
     "@iconify-json/mdi": "^1.1.64",
     "@iconify-json/teenyicons": "^1.1.9",
     "@types/three": "^0.161.2",
     "accessible-astro-components": "^2.3.5",
-    "astro": "^4.4.0",
+    "astro": "^5.4.1",
     "astro-icon": "^1.1.0",
     "sass": "^1.71.0",
     "svgo": "^3.2.0",
     "tailwindcss": "^3.4.1",
     "three": "^0.161.0"
+  },
+  "dependencies": {
+    "astro-compress": "^2.3.6"
   }
 }
