@@ -30,7 +30,7 @@ J. J. DeGuzman, E. DeVries Smith, S. Nepal, K. Miller, C. Hutton Pospick, T. Nie
 "Walk Me Through It: Using Impossible Spaces to Embody Graph Traversal Algorithms" in 
 *2024 IEEE Conference on Virtual Reality and 3D User Interfaces Abstracts and Workshops (VRW)*, 
 March 2024. doi: [10.1109/VRW62533.2024.00340](https://doi.org/10.1109/VRW62533.2024.00340)
-s
+
 C. Hutton, S. Ziccardi, J. Medina, and E. Suma Rosenberg, 
 “Please Don't Puke: Early Detection of Severe Motion Sickness in VR,” in 
 *2018 IEEE Conference on Virtual Reality and 3D User Interfaces (VR)*, 
