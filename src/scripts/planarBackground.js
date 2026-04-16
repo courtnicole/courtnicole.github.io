@@ -5,7 +5,6 @@ import {
   DirectionalLight,
   Mesh,
   ACESFilmicToneMapping,
-  PCFSoftShadowMap,
   MeshPhongMaterial,
   AmbientLight,
   ColorManagement,
@@ -13,35 +12,25 @@ import {
   Vector2,
   Float32BufferAttribute,
   BufferGeometry,
-  Raycaster,
-  Vector3,
-  MeshBasicMaterial,
   Quaternion,
-  PlaneGeometry,
+  Vector3,
 } from "three";
-import { WebGL } from "three/examples/jsm/Addons.js";
+import WebGL from "three/examples/jsm/capabilities/WebGL.js";
 import { clamp } from "three/src/math/MathUtils.js";
 
 let scene, camera, renderer;
-let geometry,
-  material,
-  materialShader,
-  plane,
-  rayPlane,
-  rayMaterial,
-  directionalLight;
+let geometry, material, materialShader, plane, directionalLight;
 let height, width, halfHeight, halfWidth, amplitude, period, cells;
-let pointerMoved = false;
+let animating = false;
+let resizeTimer = null;
 
-//prefix for noise material + uniforms
+// prefix for noise material + uniforms
 const vertexNoisePrefix = /*glsl*/ `
 uniform float time;
 uniform float vWidthInv;
 uniform float vHeightInv;
 uniform float amplitude;
 uniform vec2 period;
-uniform float hitSize;
-uniform vec3 hitPoint;
 varying float vNoise;
 
 vec4 permute(vec4 i) {
@@ -111,7 +100,7 @@ float psrdnoise(vec3 x, vec3 period, float alpha, out vec3 gradient) {
   return 39.5 * n;
 }
 `;
-//super basic noise shader to displace planar geometry
+
 const vertexNoiseBody = /*glsl*/ `
     vec3 gradient;
     vec2 vPos = vec2(position.x * vWidthInv, position.y * vHeightInv);
@@ -154,15 +143,13 @@ const loader = new TextureLoader();
 const vivid = loader.load("/lookup.png");
 vivid.colorSpace = "srgb";
 
-const pointer = new Vector2();
-const raycaster = new Raycaster();
-
 const quat = new Quaternion().setFromAxisAngle(
   new Vector3(1, 0, 0),
   -Math.PI / 2 - 0.113
 );
 
 const canvas = document.getElementById("bg");
+
 if (WebGL.isWebGLAvailable()) {
   init();
 } else {
@@ -186,14 +173,12 @@ function init() {
   camera.position.set(0, 0, 500);
 
   renderer = new WebGLRenderer({
-    antialias: true,
+    antialias: false,
     alpha: true,
   });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.5;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.setSize(window.innerWidth, window.innerHeight);
   canvas.appendChild(renderer.domElement);
 
@@ -207,24 +192,33 @@ function init() {
 
   directionalLight = new DirectionalLight(0xffffff, 1.362);
   directionalLight.position.set(0, 1, 0);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.width = 512;
-  directionalLight.shadow.mapSize.height = 512;
-  directionalLight.shadow.camera.left = -0.5 * width;
-  directionalLight.shadow.camera.right = 0.5 * width;
+  scene.add(directionalLight);
 
   initGeometry();
   initMaterial();
   initMesh();
 
   directionalLight.target = plane;
-  scene.add(directionalLight);
 
   window.addEventListener("resize", onWindowResize, false);
 
-  document.addEventListener("pointermove", onPointerMove);
+  // pause when tab is hidden
+  document.addEventListener("visibilitychange", onVisibilityChange);
 
-  renderer.setAnimationLoop(render);
+  // pause when hero scrolls out of view
+  const observer = new IntersectionObserver(onIntersection, { threshold: 0 });
+  observer.observe(canvas);
+
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  if (prefersReducedMotion) {
+    renderer.render(scene, camera);
+  } else {
+    animating = true;
+    renderer.setAnimationLoop(render);
+  }
 }
 
 function setSizes() {
@@ -287,139 +281,104 @@ function initMaterial() {
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.time = { value: 0.0 };
-    shader.uniforms.hitSize = { value: 30.0 };
     shader.uniforms.vWidthInv = { value: 1 / halfWidth };
     shader.uniforms.vHeightInv = { value: 1 / halfHeight };
     shader.uniforms.amplitude = { value: amplitude };
     shader.uniforms.period = { value: period };
     shader.uniforms.vivid = { value: vivid };
-    shader.uniforms.hitPoint = { value: new Vector3() };
 
     let token = "#include <common>";
-
-    let insert = vertexNoisePrefix;
-
     shader.vertexShader = shader.vertexShader.replace(
       token,
-      insert + "\n" + token
+      vertexNoisePrefix + "\n" + token
     );
 
-    token = "#include <normal_vertex>";
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <normal_vertex>",
+      ""
+    );
 
-    insert = "";
-
-    shader.vertexShader = shader.vertexShader.replace(token, insert);
-
-    token = "#include <begin_vertex>";
-
-    insert = vertexNoiseBody;
-
-    shader.vertexShader = shader.vertexShader.replace(token, insert);
-
-    token = "#include <common>";
-
-    insert = fragmentPrefix;
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <begin_vertex>",
+      vertexNoiseBody
+    );
 
     shader.fragmentShader = shader.fragmentShader.replace(
       token,
-      insert + "\n" + token
+      fragmentPrefix + "\n" + token
     );
 
-    token = "#include <lights_phong_fragment>";
-
-    insert = fragmentBody;
-
     shader.fragmentShader = shader.fragmentShader.replace(
-      token,
-      insert + "\n" + token
+      "#include <lights_phong_fragment>",
+      fragmentBody + "\n" + "#include <lights_phong_fragment>"
     );
 
     materialShader = shader;
   };
-
-  rayMaterial = new MeshBasicMaterial({ color: 0xffffff, visible: false });
 }
 
 function initMesh() {
   plane = new Mesh(geometry, material);
   plane.quaternion.set(quat.x, quat.y, quat.z, quat.w);
   plane.position.set(0, -0.36 * height, 0);
-  plane.castShadow = true;
-  plane.receiveShadow = true;
   scene.add(plane);
-
-  const rayGeometry = new PlaneGeometry(width, height, 1, 1);
-  rayPlane = new Mesh(rayGeometry, rayMaterial);
-  rayPlane.quaternion.set(quat.x, quat.y, quat.z, quat.w);
-  rayPlane.position.set(0, -0.36 * height, 0);
-  scene.add(rayPlane);
 }
 
 function updatePlaneGeometry() {
   geometry.dispose();
   plane.geometry.dispose();
-  rayPlane.geometry.dispose();
 
   initGeometry();
-
-  directionalLight.shadow.camera.left = -0.5 * width;
-  directionalLight.shadow.camera.right = 0.5 * width;
 
   plane.geometry = geometry;
   plane.position.set(0, -0.36 * height, 0);
 
-  const rayGeometry = new PlaneGeometry(width, height, 1, 1);
-  rayPlane.geometry = rayGeometry;
-  rayPlane.position.set(0, -0.36 * height, 0);
-
-  if (materialShader)
+  if (materialShader) {
     materialShader.uniforms["vWidthInv"].value = 1 / halfWidth;
-  if (materialShader)
     materialShader.uniforms["vHeightInv"].value = 1 / halfHeight;
-  if (materialShader) materialShader.uniforms["amplitude"].value = amplitude;
-  if (materialShader) materialShader.uniforms["period"].value = period;
+    materialShader.uniforms["amplitude"].value = amplitude;
+    materialShader.uniforms["period"].value = period;
+  }
 }
 
 function render() {
   if (!canvas) return;
-
-  const now = performance.now() * 0.00015;
-  if (materialShader) materialShader.uniforms["time"].value = now;
-
-  if (pointerMoved) {
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObject(rayPlane);
-    if (intersects.length > 0) {
-      const point = intersects[0].point;
-      if (materialShader)
-        materialShader.uniforms["hitPoint"].value.set(
-          point.x,
-          point.y,
-          -point.z
-        );
-    }
-    pointerMoved = false;
-  } else {
-    if (materialShader)
-      materialShader.uniforms["hitPoint"].value.set(10000, 10000);
-  }
-
+  if (materialShader)
+    materialShader.uniforms["time"].value = performance.now() * 0.00015;
   renderer.render(scene, camera);
 }
 
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  setSizes();
-  updatePlaneGeometry();
+function onVisibilityChange() {
+  if (document.hidden) {
+    renderer.setAnimationLoop(null);
+    animating = false;
+  } else if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    animating = true;
+    renderer.setAnimationLoop(render);
+  }
 }
 
-function onPointerMove(event) {
-  if (event.isPrimary === false) return;
+function onIntersection(entries) {
+  for (const entry of entries) {
+    if (entry.isIntersecting) {
+      if (!animating && !document.hidden && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        animating = true;
+        renderer.setAnimationLoop(render);
+      }
+    } else {
+      renderer.setAnimationLoop(null);
+      animating = false;
+    }
+  }
+}
 
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  pointerMoved = true;
+function onWindowResize() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    setSizes();
+    updatePlaneGeometry();
+  }, 150);
 }
