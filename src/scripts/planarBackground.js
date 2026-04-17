@@ -157,10 +157,7 @@ if (WebGL.isWebGLAvailable()) {
 }
 
 function init() {
-  if (!canvas) {
-    console.log("No canvas found");
-    return;
-  }
+  if (!canvas) return;
 
   ColorManagement.enabled = true;
 
