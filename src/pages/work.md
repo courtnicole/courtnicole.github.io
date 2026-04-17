@@ -3,6 +3,13 @@ layout: ../layouts/MarkdownLayout.astro
 title: Industry Work
 ---
 
+### MediView XR
+**Software Engineer**  
+*AR/VR & 3D Graphics*  
+*June 2025 - Present*  
+
+I develop AR/VR software and 3D graphics solutions, applying my research background in spatial computing and real-time rendering to medical extended reality applications.
+
 ### Magic Leap  
 **Graduate Research Fellow**  
 *Product Research & Development*  
