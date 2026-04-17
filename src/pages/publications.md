@@ -8,6 +8,8 @@ title: Publications
 T. Nie, C. Hutton Pospick, V. Cantory, D. Zhang, J. DeGuzman, V. Interrante, I. Adhanom, and E. Suma Rosenberg, "Peripheral Teleportation: A Rest Frame Design to Mitigate Cybersickness During Virtual Locomotion", *IEEE Transactions on Visualization and Computer Graphics*, March 2025. (*To appear*)
 **\[Best Paper Award\]**
 
+V. Cantory, J. Kim, C. Hutton Pospick, K. Vaziri, E. Suma Rosenberg, et al., "A Feasibility and Impact Investigation of Continuous Subjective Cybersickness Feedback Reporting," in *Proceedings of the 2025 31st ACM Symposium on Virtual Reality Software and Technology (VRST)*, 2025.
+
 C. Hutton Pospick and E. Suma Rosenberg, "Creating and Manipulating 3D Paths With Mixed Reality Spatial Interfaces" in *Frontiers in Virtual Reality*, vol. 4 (2023). doi: [10.3389/frvir.2023.1192757](https://doi.org/10.3389/frvir.2023.1192757).
 
 J. Thomas, C. Hutton Pospick, and E. Suma Rosenberg, 
